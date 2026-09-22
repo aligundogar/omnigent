@@ -56,7 +56,11 @@ describe("hostProvidersApi", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/v1/hosts/host_1/agent-specs/my-agent/pin");
     expect(init?.method).toBe("PUT");
-    expect(JSON.parse(String(init?.body))).toEqual({ provider: null, model: "gpt-x" });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      provider: null,
+      model: "gpt-x",
+      effort: null,
+    });
   });
 
   it("clearHostAgentPin DELETEs", async () => {

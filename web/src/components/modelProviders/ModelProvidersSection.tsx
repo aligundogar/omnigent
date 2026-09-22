@@ -412,6 +412,7 @@ interface AgentPinDialogProps {
 function AgentPinDialog({ open, onOpenChange, hostId, agent, providers }: AgentPinDialogProps) {
   const [provider, setProvider] = useState<string>("");
   const [model, setModel] = useState("");
+  const [effort, setEffort] = useState("");
   const [error, setError] = useState<string | null>(null);
   const pin = usePinHostAgent(hostId);
 
@@ -420,6 +421,7 @@ function AgentPinDialog({ open, onOpenChange, hostId, agent, providers }: AgentP
     setError(null);
     setProvider(agent.auth?.type === "provider" && agent.auth.name ? agent.auth.name : "");
     setModel(agent.model ?? "");
+    setEffort(agent.reasoning_effort ?? "");
   }, [open, agent]);
 
   const selected = useMemo(
@@ -436,7 +438,7 @@ function AgentPinDialog({ open, onOpenChange, hostId, agent, providers }: AgentP
     pin.mutate(
       {
         agent: (agent as HostAgentSpec).name,
-        pin: { provider: provider || null, model: model || null },
+        pin: { provider: provider || null, model: model || null, effort: effort || null },
       },
       {
         onSuccess: () => onOpenChange(false),
@@ -451,8 +453,8 @@ function AgentPinDialog({ open, onOpenChange, hostId, agent, providers }: AgentP
         <DialogHeader>
           <DialogTitle>Pin {agent?.name}</DialogTitle>
           <DialogDescription>
-            A provider/model pin overrides every ambient default for this agent — it wins over the
-            host default and the provider&apos;s own default model.
+            A provider/model/effort pin overrides every ambient default for this agent — it wins
+            over the host default and the provider&apos;s own default model.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
@@ -486,6 +488,15 @@ function AgentPinDialog({ open, onOpenChange, hostId, agent, providers }: AgentP
                 <option key={m} value={m} />
               ))}
             </datalist>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="pin-effort">Reasoning effort</Label>
+            <Input
+              id="pin-effort"
+              value={effort}
+              onChange={(e) => setEffort(e.target.value)}
+              placeholder="low / medium / high (spec pin)"
+            />
           </div>
           {error && (
             <p className="text-destructive flex items-center gap-1 text-sm">
@@ -714,7 +725,10 @@ function HostConfigPanels({ hostId }: { hostId: string }) {
                   variant="ghost"
                   size="sm"
                   onClick={() => clearPin.mutate(agent.name)}
-                  disabled={clearPin.isPending || (agent.auth?.type !== "provider" && !agent.model)}
+                  disabled={
+                    clearPin.isPending ||
+                    (agent.auth?.type !== "provider" && !agent.model && !agent.reasoning_effort)
+                  }
                 >
                   <Trash2Icon className="size-4" /> Clear
                 </Button>

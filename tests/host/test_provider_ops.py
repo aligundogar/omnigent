@@ -258,6 +258,26 @@ class TestAgentPin:
             provider_ops.agent_pin_set("my-agent", agents_dir=agents_dir)
         assert err.value.code == ErrorCode.INVALID_INPUT
 
+    def test_pin_sets_effort_and_reports_it(self, tmp_path) -> None:
+        agents_dir = _bundle_agent(tmp_path)
+        result = provider_ops.agent_pin_set("my-agent", effort="high", agents_dir=agents_dir)
+        assert result["spec"]["reasoning_effort"] == "high"
+        raw = _load_yaml(f"{agents_dir}/my-agent/config.yaml")
+        assert raw["executor"]["reasoning_effort"] == "high"
+
+    def test_pin_rejects_blank_effort(self, tmp_path) -> None:
+        agents_dir = _bundle_agent(tmp_path)
+        with pytest.raises(OmnigentError) as err:
+            provider_ops.agent_pin_set("my-agent", effort="  ", agents_dir=agents_dir)
+        assert err.value.code == ErrorCode.INVALID_INPUT
+
+    def test_clear_removes_effort_pin(self, tmp_path) -> None:
+        agents_dir = _bundle_agent(tmp_path)
+        provider_ops.agent_pin_set("my-agent", model="gpt-x", effort="high", agents_dir=agents_dir)
+        result = provider_ops.agent_pin_clear("my-agent", agents_dir=agents_dir)
+        assert result["spec"]["reasoning_effort"] is None
+        assert result["spec"]["model"] is None
+
     def test_clear_removes_provider_pin_but_keeps_inline_auth(self, tmp_path) -> None:
         agents_dir = _bundle_agent(tmp_path)
         provider_ops.agent_pin_set("my-agent", provider="openrouter", agents_dir=agents_dir)
