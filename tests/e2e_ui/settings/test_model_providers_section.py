@@ -158,4 +158,4 @@ def test_pin_dialog_sets_agent_pin(page: Page, live_server: str) -> None:
     page.get_by_role("button", name="Save pin").click()
 
     assert captured["url"].endswith(f"/v1/hosts/{_HOST_ID}/agent-specs/my-agent/pin")
-    assert captured["body"] == {"provider": "openrouter", "model": "gpt-x"}
+    assert captured["body"] == {"provider": "openrouter", "model": "gpt-x", "effort": None}
