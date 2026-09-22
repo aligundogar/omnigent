@@ -173,6 +173,17 @@
       "AgentPinRequest": {
         "description": "Body for `PUT /hosts/{host_id}/agents/{name}/pin`.\n\nAt least one field must be set; `None` leaves that selection\nunchanged.",
         "properties": {
+          "effort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort"
+          },
           "model": {
             "anyOf": [
               {
@@ -9579,7 +9590,7 @@
         ]
       },
       "put": {
-        "description": "Pin an agent spec's provider and/or model on the host.\n\nWrites `executor.auth: {type: provider, name: ...}` and/or\n`executor.model` \u2014 the runtime's strongest per-agent selector;\nresolution then prefers the pin over every ambient default.",
+        "description": "Pin an agent spec's provider, model and/or reasoning effort.\n\nWrites `executor.auth: {type: provider, name: ...}`,\n`executor.model` and/or `executor.reasoning_effort` \u2014 the\nruntime's strongest per-agent selectors; resolution then prefers\nthe pin over every ambient default.",
         "operationId": "pin_host_agent_v1_hosts__host_id__agent_specs__agent_name__pin_put",
         "parameters": [
           {

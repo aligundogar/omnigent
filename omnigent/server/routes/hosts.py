@@ -501,6 +501,7 @@ class AgentPinRequest(BaseModel):
 
     provider: str | None = None
     model: str | None = None
+    effort: str | None = None
 
 
 class HostModelOptionsResponse(BaseModel):
@@ -1796,22 +1797,28 @@ def create_hosts_router(
         agent_name: str,
         body: AgentPinRequest,
     ) -> dict[str, Any]:
-        """Pin an agent spec's provider and/or model on the host.
+        """Pin an agent spec's provider, model and/or reasoning effort.
 
-        Writes ``executor.auth: {type: provider, name: ...}`` and/or
-        ``executor.model`` — the runtime's strongest per-agent selector;
-        resolution then prefers the pin over every ambient default.
+        Writes ``executor.auth: {type: provider, name: ...}``,
+        ``executor.model`` and/or ``executor.reasoning_effort`` — the
+        runtime's strongest per-agent selectors; resolution then prefers
+        the pin over every ambient default.
         """
-        if body.provider is None and body.model is None:
+        if body.provider is None and body.model is None and body.effort is None:
             raise HTTPException(
                 status_code=400,
-                detail="pin requires a provider and/or model",
+                detail="pin requires a provider, model and/or reasoning effort",
             )
         return await _run_provider_op(
             request,
             host_id,
             "agent_pin_set",
-            {"agent": agent_name, "provider": body.provider, "model": body.model},
+            {
+                "agent": agent_name,
+                "provider": body.provider,
+                "model": body.model,
+                "effort": body.effort,
+            },
         )
 
     @router.delete("/hosts/{host_id}/agent-specs/{agent_name}/pin")
