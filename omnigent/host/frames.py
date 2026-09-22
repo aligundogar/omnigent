@@ -1001,6 +1001,7 @@ class HostSkillsResultFrame:
     agent_id: str | None = None
 
 
+@dataclass
 class HostProviderOpFrame:
     """Server → host: run one provider / agent-pin operation on that machine.
 
