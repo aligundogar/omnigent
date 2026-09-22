@@ -52,6 +52,7 @@ from omnigent.errors import (
     ErrorCategory,
     ErrorImpact,
     ErrorPhase,
+    OmnigentError,
     category_for_code,
     phase_for_code,
 )
@@ -127,8 +128,6 @@ from omnigent.host.frames import (
     encode_import_local_session_frames,
     workspace_missing_message,
 )
-
-from omnigent.host.provider_ops import run_provider_op
 from omnigent.host.git_worktree import (
     WorktreeError,
     create_worktree,
@@ -137,6 +136,7 @@ from omnigent.host.git_worktree import (
 )
 from omnigent.host.identity import HostIdentity, load_or_create_host_identity
 from omnigent.host.maintenance import HostMaintenanceJanitor
+from omnigent.host.provider_ops import run_provider_op
 from omnigent.host.runner_zygote import ZygoteManager, ZygoteRunnerProc, ZygoteUnavailable
 from omnigent.inner import _proc
 from omnigent.onboarding.harness_auth import (
@@ -926,7 +926,6 @@ def _build_runner_env(
     # ``api_key_ref: env:MY_TOKEN``) would need to manually add it to
     # OMNIGENT_RUNNER_ENV_PASSTHROUGH — their credential resolves fine in
     # the CLI/daemon but silently drops before reaching the runner subprocess.
-    from omnigent.errors import OmnigentError as _OmnigentError
     from omnigent.onboarding.provider_config import (
         load_config,
         provider_credential_env_vars,
@@ -934,7 +933,7 @@ def _build_runner_env(
 
     try:
         config_env_vars = provider_credential_env_vars(load_config())
-    except (OSError, _OmnigentError):
+    except (OSError, OmnigentError):
         config_env_vars = frozenset()
     if inference_config is not None:
         config_env_vars |= provider_credential_env_vars(
@@ -3778,7 +3777,7 @@ class HostProcess:
         """
         try:
             payload = run_provider_op(frame.op, frame.params)
-        except _OmnigentError as exc:
+        except OmnigentError as exc:
             return HostProviderOpResultFrame(
                 request_id=frame.request_id,
                 status="failed",
