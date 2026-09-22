@@ -202,6 +202,30 @@ _HARNESS_FAMILY: dict[str, str] = {
     "native-antigravity": GEMINI_FAMILY,
     "agy-native": GEMINI_FAMILY,
     "native-agy": GEMINI_FAMILY,
+    # OpenCode routes generic-provider traffic over the OpenAI-compatible
+    # wire (the opencode-native bridge synthesizes an
+    # ``@ai-sdk/openai-compatible`` provider per spawn), and its CLI takes
+    # a per-spawn ``-m provider/model`` override — same shape as antigravity
+    # above, so it consumes the ``openai`` family for resolution.
+    "opencode": OPENAI_FAMILY,
+    "opencode-native": OPENAI_FAMILY,
+    "native-opencode": OPENAI_FAMILY,
+    # Hermes Agent accepts per-spawn ``--provider`` / ``--model`` /
+    # ``--reasoning`` flags and its default profile points at an
+    # OpenAI-compatible endpoint (``api_mode: chat_completions``), so it
+    # consumes the ``openai`` family for resolution.
+    "hermes": OPENAI_FAMILY,
+    "hermes-native": OPENAI_FAMILY,
+    "native-hermes": OPENAI_FAMILY,
+    # prime-agent accepts per-spawn ``--provider`` / ``--model`` /
+    # ``--thinking`` flags (plus ACP mode) and its default provider is an
+    # OpenAI-compatible router, so it consumes the ``openai`` family.
+    "prime-agent": OPENAI_FAMILY,
+    "prime-agent-native": OPENAI_FAMILY,
+    "native-prime-agent": OPENAI_FAMILY,
+    # NB: ``feynman`` is intentionally absent. It is a Pi-based shell, so
+    # like ``pi`` it consumes both families and resolution falls back to
+    # whichever family the active provider configures.
 }
 
 # Executor-type spellings that ``AgentSpec.harness_kind`` returns for SDK
