@@ -1849,6 +1849,9 @@ def encode_host_frame(frame: HostFrame) -> str:
                 "request_id": frame.request_id,
                 "status": frame.status,
                 "mcp_servers": frame.mcp_servers,
+                "error": frame.error,
+            }
+        )
     if isinstance(frame, HostProviderOpFrame):
         return _encode_payload(
             {

@@ -490,6 +490,8 @@ class HostConnection:
         default_factory=dict
     )
     pending_mcp_servers: dict[str, asyncio.Future[HostMcpServersResultFrame]] = field(
+        default_factory=dict,
+    )
     pending_provider_ops: dict[str, asyncio.Future[dict[str, Any]]] = field(
         default_factory=dict,
     )
