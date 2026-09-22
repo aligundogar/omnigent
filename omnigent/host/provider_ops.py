@@ -39,9 +39,13 @@ import yaml
 from omnigent.errors import ErrorCode, OmnigentError
 from omnigent.onboarding.provider_config import (
     _VALID_FAMILIES,
+    PI_SURFACE,
     _config_path,
     _parse_provider,
     credential_for_block,
+    default_provider_for_harness,
+    provider_family_for_harness,
+    surface_default_model,
 )
 
 _logger = logging.getLogger(__name__)
@@ -395,7 +399,8 @@ def _spec_summary(name: str, raw: Mapping[str, Any], path: Path) -> dict[str, An
     :param name: The agent's directory / file-stem name.
     :param raw: The parsed spec mapping.
     :param path: Where the spec lives (for the response's ``path`` hint).
-    :returns: ``{"name", "harness", "model", "auth", "spec_version", "path"}``.
+    :returns: ``{"name", "harness", "model", "reasoning_effort", "auth",
+        "spec_version", "path"}``.
     """
     executor = raw.get("executor")
     executor = executor if isinstance(executor, dict) else {}
@@ -408,10 +413,12 @@ def _spec_summary(name: str, raw: Mapping[str, Any], path: Path) -> dict[str, An
         auth_out = {"type": auth.get("type")}
         if auth.get("type") == "provider":
             auth_out["name"] = auth.get("name")
+    effort = executor.get("reasoning_effort")
     return {
         "name": name,
         "harness": harness if isinstance(harness, str) else None,
         "model": executor.get("model") if isinstance(executor.get("model"), str) else None,
+        "reasoning_effort": effort if isinstance(effort, str) else None,
         "auth": auth_out,
         "spec_version": raw.get("spec_version"),
         "path": str(path),
@@ -558,6 +565,121 @@ def agent_pin_clear(
     }
 
 
+# ── effective resolution ─────────────────────────────
+
+# Where one effective value came from. ``"spec"`` is an explicit pin in the
+# agent spec (strongest), ``"host-default"`` is the host config's per-family
+# default, ``"unresolved"`` means nothing provides a value.
+_SOURCE_SPEC = "spec"
+_SOURCE_HOST_DEFAULT = "host-default"
+_SOURCE_UNRESOLVED = "unresolved"
+
+
+def _resolve_agent_effective(
+    name: str, raw: Mapping[str, Any], config: Mapping[str, Any], path: Path | str = ""
+) -> dict[str, Any]:
+    """Resolve one agent's effective model/provider/effort.
+
+    Resolution order (issue omnigent-ai/omnigent#7134): agent spec pin >
+    host default > unresolved. The provider is resolved first because a
+    spec-pinned provider (without a pinned model) still yields that
+    provider's family default model.
+
+    :param name: The agent's directory / file-stem name.
+    :param raw: The parsed agent spec mapping.
+    :param config: This host's parsed ``config.yaml`` mapping.
+    :param path: The spec path (only used for the harness lookup).
+    :returns: ``{"agent", "harness", "model", "model_source", "provider",
+        "provider_source", "reasoning_effort", "effort_source"}``.
+    """
+    executor = raw.get("executor")
+    executor = executor if isinstance(executor, dict) else {}
+    harness = _spec_summary(name, raw, Path(path))["harness"]
+
+    spec_model = executor.get("model")
+    spec_model = spec_model if isinstance(spec_model, str) else None
+    auth = executor.get("auth")
+    spec_provider = None
+    if isinstance(auth, dict) and auth.get("type") == "provider":
+        candidate = auth.get("name")
+        spec_provider = candidate if isinstance(candidate, str) else None
+    spec_effort = executor.get("reasoning_effort")
+    spec_effort = spec_effort if isinstance(spec_effort, str) else None
+
+    entry = None
+    if isinstance(harness, str):
+        try:
+            entry = default_provider_for_harness(config, harness)
+        except OmnigentError:
+            entry = None
+
+    if spec_provider is not None:
+        provider, provider_source = spec_provider, _SOURCE_SPEC
+    elif entry is not None:
+        provider, provider_source = entry.name, _SOURCE_HOST_DEFAULT
+    else:
+        provider, provider_source = None, _SOURCE_UNRESOLVED
+
+    if spec_model is not None:
+        model, model_source = spec_model, _SOURCE_SPEC
+    elif entry is not None:
+        family = provider_family_for_harness(harness)
+        surface = PI_SURFACE if harness == "pi" else (family or "")
+        default_model = surface_default_model(entry, surface) if surface else None
+        if default_model is not None:
+            model, model_source = default_model, _SOURCE_HOST_DEFAULT
+        else:
+            model, model_source = None, _SOURCE_UNRESOLVED
+    else:
+        model, model_source = None, _SOURCE_UNRESOLVED
+
+    if spec_effort is not None:
+        effort, effort_source = spec_effort, _SOURCE_SPEC
+    else:
+        effort, effort_source = None, _SOURCE_UNRESOLVED
+
+    return {
+        "agent": name,
+        "harness": harness,
+        "model": model,
+        "model_source": model_source,
+        "provider": provider,
+        "provider_source": provider_source,
+        "reasoning_effort": effort,
+        "effort_source": effort_source,
+    }
+
+
+def effective_list(
+    config_path: str | None = None, agents_dir: str | None = None
+) -> dict[str, Any]:
+    """Resolve every agent spec's effective model/provider/effort on this host.
+
+    One row per spec; a spec that fails to resolve carries an ``"error"``
+    field instead of dropping the whole listing.
+
+    :param config_path: Explicit config path (tests); ``None`` uses this
+        host's ``config.yaml``.
+    :param agents_dir: Explicit agents directory (tests); ``None`` uses
+        ``~/.omnigent/agents``.
+    :returns: ``{"rows": [...]}``.
+    """
+    config = _load_config_mapping(config_path)
+    root = Path(agents_dir) if agents_dir else _agents_dir()
+    rows = []
+    for name, path in _agent_specs(root):
+        try:
+            raw = _load_agent_spec(path)
+        except OmnigentError as exc:
+            rows.append({"agent": name, "error": str(exc)})
+            continue
+        try:
+            rows.append(_resolve_agent_effective(name, raw, config, path))
+        except OmnigentError as exc:
+            rows.append({"agent": name, "harness": None, "error": str(exc)})
+    return {"rows": rows}
+
+
 # ── op dispatch ──────────────────────────────────────────
 
 # The wire-dispatch table deliberately does NOT honor ``config_path`` /
@@ -585,6 +707,7 @@ _PROVIDER_OPS = {
         provider=bool(params.get("provider", True)),
         model=bool(params.get("model", True)),
     ),
+    "effective_list": lambda _params: effective_list(),
 }
 
 

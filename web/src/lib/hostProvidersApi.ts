@@ -38,9 +38,26 @@ export interface HostAgentSpec {
   name: string;
   harness: string | null;
   model: string | null;
+  reasoning_effort?: string | null;
   auth: { type: string; name?: string } | null;
   spec_version: number | string | null;
   path: string;
+}
+
+/** Where one effective value came from: spec pin, host default, or nothing. */
+export type EffectiveSource = "spec" | "host-default" | "unresolved";
+
+/** One agent's resolved model/provider/effort on a host (issue #7134). */
+export interface HostEffectiveRow {
+  agent: string;
+  harness: string | null;
+  model: string | null;
+  model_source: EffectiveSource;
+  provider: string | null;
+  provider_source: EffectiveSource;
+  reasoning_effort: string | null;
+  effort_source: EffectiveSource;
+  error?: string;
 }
 
 export interface ProviderTestResult {
@@ -160,4 +177,13 @@ export async function clearHostAgentPin(hostId: string, agentName: string): Prom
     { method: "DELETE" },
   );
   await jsonOrThrow<unknown>(res);
+}
+
+/** Resolve every host-local agent spec's effective model/provider/effort. */
+export async function fetchHostEffective(hostId: string): Promise<HostEffectiveRow[]> {
+  const res = await authenticatedFetch(
+    `/v1/hosts/${encodeURIComponent(hostId)}/agent-specs/effective`,
+  );
+  const body = await jsonOrThrow<{ rows: HostEffectiveRow[] }>(res);
+  return body.rows;
 }
