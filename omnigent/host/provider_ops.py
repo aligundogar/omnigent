@@ -44,6 +44,7 @@ from omnigent.onboarding.provider_config import (
     _parse_provider,
     credential_for_block,
     default_provider_for_harness,
+    provider_families,
     provider_family_for_harness,
     surface_default_model,
 )
@@ -629,7 +630,7 @@ def _resolve_agent_effective(
     entry = None
     if isinstance(harness, str):
         try:
-            entry = default_provider_for_harness(config, harness)
+            entry = default_provider_for_harness(dict(config), harness)
         except OmnigentError:
             entry = None
 
@@ -643,8 +644,19 @@ def _resolve_agent_effective(
     if spec_model is not None:
         model, model_source = spec_model, _SOURCE_SPEC
     elif entry is not None:
-        family = provider_family_for_harness(harness)
-        surface = PI_SURFACE if harness == "pi" else (family or "")
+        # Prefer the harness's own family when the resolved provider
+        # serves it; otherwise fall back across the provider's families
+        # (pi-style preference). This keeps multi-family harnesses
+        # (pi, feynman) and provider-agnostic routers resolving a model
+        # instead of reporting unresolved.
+        harness_family = provider_family_for_harness(harness)
+        served = provider_families(entry)
+        if harness_family in served:
+            surface = harness_family
+        elif harness == "pi" or harness_family is None:
+            surface = PI_SURFACE
+        else:
+            surface = sorted(served)[0] if served else ""
         default_model = surface_default_model(entry, surface) if surface else None
         if default_model is not None:
             model, model_source = default_model, _SOURCE_HOST_DEFAULT
@@ -686,7 +698,7 @@ def effective_list(
     """
     config = _load_config_mapping(config_path)
     root = Path(agents_dir) if agents_dir else _agents_dir()
-    rows = []
+    rows: list[dict[str, Any]] = []
     for name, path in _agent_specs(root):
         try:
             raw = _load_agent_spec(path)
