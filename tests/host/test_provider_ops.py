@@ -143,9 +143,7 @@ class TestProviderTest:
             status_code = 200
 
             def json(self):
-                return {
-                    "data": [{"id": "gpt-x"}, {"id": "gpt-y"}, {"nope": True}]
-                }
+                return {"data": [{"id": "gpt-x"}, {"id": "gpt-y"}, {"nope": True}]}
 
         def fake_get(url, headers=None, timeout=None):
             seen["url"] = url
@@ -296,9 +294,7 @@ class TestRunProviderOp:
             provider_ops.run_provider_op("reformat_disk", {})
         assert err.value.code == ErrorCode.INVALID_INPUT
 
-    def test_wire_params_cannot_redirect_config_path(
-        self, tmp_path, monkeypatch
-    ) -> None:
+    def test_wire_params_cannot_redirect_config_path(self, tmp_path, monkeypatch) -> None:
         """``config_path`` in frame params is ignored — ops hit the real file.
 
         A remote caller must not be able to point a write at an arbitrary
@@ -343,6 +339,4 @@ class TestRunProviderOp:
             )
         assert err.value.code == ErrorCode.NOT_FOUND
         assert list(evil.rglob("*.bak-*")) == []
-        assert _load_yaml(evil / "my-agent" / "config.yaml")["executor"].get(
-            "model"
-        ) is None
+        assert _load_yaml(evil / "my-agent" / "config.yaml")["executor"].get("model") is None

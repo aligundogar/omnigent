@@ -1678,7 +1678,6 @@ def create_hosts_router(
 
         return {"object": "list", "data": worktrees}
 
-
     # ── Config control plane: host providers + per-agent pins (#7134) ──
 
     async def _run_provider_op(
@@ -1822,8 +1821,6 @@ def create_hosts_router(
         agent_name: str,
     ) -> dict[str, Any]:
         """Remove an agent spec's provider and model pins."""
-        return await _run_provider_op(
-            request, host_id, "agent_pin_clear", {"agent": agent_name}
-        )
+        return await _run_provider_op(request, host_id, "agent_pin_clear", {"agent": agent_name})
 
     return router

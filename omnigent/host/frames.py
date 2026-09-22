@@ -999,6 +999,8 @@ class HostSkillsResultFrame:
     error_code: str | None = None
     session_id: str | None = None
     agent_id: str | None = None
+
+
 class HostProviderOpFrame:
     """Server → host: run one provider / agent-pin operation on that machine.
 
@@ -2381,6 +2383,9 @@ def _decode_skills_result(msg: _JsonObject) -> HostSkillsResultFrame:
         error_code=_optional_nullable_str(msg, "error_code"),
         session_id=_optional_nullable_str(msg, "session_id"),
         agent_id=_optional_nullable_str(msg, "agent_id"),
+    )
+
+
 def _decode_provider_op(msg: _JsonObject) -> HostProviderOpFrame:
     """Decode a host.provider_op request frame."""
     params = msg.get("params", {})

@@ -64,7 +64,10 @@ def test_provider_op_frames_round_trip() -> None:
     frame = HostProviderOpFrame(
         request_id="req-1",
         op="provider_upsert",
-        params={"name": "gw", "entry": {"kind": "gateway", "openai": {"base_url": "https://x/v1"}}},
+        params={
+            "name": "gw",
+            "entry": {"kind": "gateway", "openai": {"base_url": "https://x/v1"}},
+        },
     )
     decoded = decode_host_frame(encode_host_frame(frame))
     assert decoded == frame
