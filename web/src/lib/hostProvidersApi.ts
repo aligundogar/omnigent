@@ -151,9 +151,10 @@ export async function fetchHostAgentSpecs(hostId: string): Promise<HostAgentSpec
 export interface AgentPinInput {
   provider?: string | null;
   model?: string | null;
+  effort?: string | null;
 }
 
-/** Pin an agent spec's provider and/or model. */
+/** Pin an agent spec's provider, model and/or reasoning effort. */
 export async function pinHostAgent(
   hostId: string,
   agentName: string,
@@ -164,7 +165,11 @@ export async function pinHostAgent(
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: pin.provider ?? null, model: pin.model ?? null }),
+      body: JSON.stringify({
+        provider: pin.provider ?? null,
+        model: pin.model ?? null,
+        effort: pin.effort ?? null,
+      }),
     },
   );
   await jsonOrThrow<unknown>(res);

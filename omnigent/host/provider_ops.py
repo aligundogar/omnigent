@@ -448,14 +448,16 @@ def agent_pin_set(
     *,
     provider: str | None = None,
     model: str | None = None,
+    effort: str | None = None,
     agents_dir: str | None = None,
 ) -> dict[str, Any]:
-    """Pin one agent spec's provider and/or model.
+    """Pin one agent spec's provider, model and/or reasoning effort.
 
     Writes the pin where the spec format reads it: ``executor.auth =
     {type: provider, name: <provider>}`` — the strongest per-spec
     provider selector the runtime knows (fail-loud when the provider is
-    undeclared) — and ``executor.model`` for the model id. The agent's
+    undeclared) — ``executor.model`` for the model id, and
+    ``executor.reasoning_effort`` for the effort level. The agent's
     other fields are untouched; the file is backed up first.
 
     :param agent: The agent's directory / file-stem name under the
@@ -464,15 +466,18 @@ def agent_pin_set(
         provider selection unchanged.
     :param model: Model id to pin, or ``None`` to leave the model
         unchanged.
+    :param effort: Reasoning-effort level to pin, or ``None`` to leave
+        it unchanged.
     :param agents_dir: Explicit agents directory (tests).
     :returns: ``{"agent": ..., "spec": <summary after the write>,
         "backup": <path or "">}``.
     :raises OmnigentError: ``NOT_FOUND`` for an unknown agent;
         ``INVALID_INPUT`` for an empty pin request or a bad name.
     """
-    if not provider and not model:
+    if not provider and not model and not effort:
         raise OmnigentError(
-            "agent_pin_set requires a provider and/or model", code=ErrorCode.INVALID_INPUT
+            "agent_pin_set requires a provider, model and/or reasoning effort",
+            code=ErrorCode.INVALID_INPUT,
         )
     root = Path(agents_dir) if agents_dir else _agents_dir()
     matches = [(n, p) for n, p in _agent_specs(root) if n == agent]
@@ -497,13 +502,23 @@ def agent_pin_set(
         if not isinstance(model, str) or not model.strip():
             raise OmnigentError(f"invalid model id {model!r}", code=ErrorCode.INVALID_INPUT)
         executor["model"] = model.strip()
+    if effort is not None:
+        if not isinstance(effort, str) or not effort.strip():
+            raise OmnigentError(
+                f"invalid reasoning effort {effort!r}", code=ErrorCode.INVALID_INPUT
+            )
+        executor["reasoning_effort"] = effort.strip()
     backup = _backup(str(path))
     tmp = f"{path}.tmp-{os.getpid()}"
     with open(tmp, "w") as f:
         yaml.safe_dump(raw, f, sort_keys=False)
     os.replace(tmp, path)
     _logger.info(
-        "agent %r pinned (provider=%r model=%r) via control plane", agent, provider, model
+        "agent %r pinned (provider=%r model=%r effort=%r) via control plane",
+        agent,
+        provider,
+        model,
+        effort,
     )
     return {
         "agent": agent,
@@ -517,9 +532,10 @@ def agent_pin_clear(
     *,
     provider: bool = True,
     model: bool = True,
+    effort: bool = True,
     agents_dir: str | None = None,
 ) -> dict[str, Any]:
-    """Remove one agent spec's provider and/or model pin.
+    """Remove one agent spec's provider, model and/or effort pins.
 
     Only a ``provider``-typed ``executor.auth`` is removed — an inline
     ``api_key`` auth block is left alone (the panel never silently drops
@@ -528,15 +544,17 @@ def agent_pin_clear(
     :param agent: The agent's directory / file-stem name.
     :param provider: Also remove the provider pin.
     :param model: Also remove the model pin.
+    :param effort: Also remove the reasoning-effort pin.
     :param agents_dir: Explicit agents directory (tests).
     :returns: ``{"agent": ..., "spec": <summary after the write>,
         "backup": <path or "">}``.
     :raises OmnigentError: ``NOT_FOUND`` for an unknown agent;
         ``INVALID_INPUT`` when nothing was requested.
     """
-    if not provider and not model:
+    if not provider and not model and not effort:
         raise OmnigentError(
-            "agent_pin_clear requires provider and/or model", code=ErrorCode.INVALID_INPUT
+            "agent_pin_clear requires provider, model and/or effort",
+            code=ErrorCode.INVALID_INPUT,
         )
     root = Path(agents_dir) if agents_dir else _agents_dir()
     matches = [(n, p) for n, p in _agent_specs(root) if n == agent]
@@ -552,6 +570,8 @@ def agent_pin_clear(
                 del executor["auth"]
         if model and "model" in executor:
             del executor["model"]
+        if effort and "reasoning_effort" in executor:
+            del executor["reasoning_effort"]
     backup = _backup(str(path))
     tmp = f"{path}.tmp-{os.getpid()}"
     with open(tmp, "w") as f:
@@ -701,11 +721,13 @@ _PROVIDER_OPS = {
         params.get("agent"),
         provider=params.get("provider") if isinstance(params.get("provider"), str) else None,
         model=params.get("model") if isinstance(params.get("model"), str) else None,
+        effort=params.get("effort") if isinstance(params.get("effort"), str) else None,
     ),
     "agent_pin_clear": lambda params: agent_pin_clear(
         params.get("agent"),
         provider=bool(params.get("provider", True)),
         model=bool(params.get("model", True)),
+        effort=bool(params.get("effort", True)),
     ),
     "effective_list": lambda _params: effective_list(),
 }
