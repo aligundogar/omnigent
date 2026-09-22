@@ -6,7 +6,7 @@ import {
   clearHostAgentPin,
   fetchHostAgentSpecs,
   fetchHostProviders,
-  HostProvidersApiError,
+  type HostProvidersApiError,
   pinHostAgent,
   testHostProvider,
   upsertHostProvider,

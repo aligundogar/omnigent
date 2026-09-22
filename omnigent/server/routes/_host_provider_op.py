@@ -48,9 +48,7 @@ async def request_host_provider_op(
     request_id = secrets.token_hex(8)
     future: asyncio.Future[dict[str, Any]] = asyncio.get_running_loop().create_future()
     host_conn.pending_provider_ops[request_id] = future
-    frame = encode_host_frame(
-        HostProviderOpFrame(request_id=request_id, op=op, params=params)
-    )
+    frame = encode_host_frame(HostProviderOpFrame(request_id=request_id, op=op, params=params))
     try:
         host_registry.send_text(host_conn, frame)
         return await asyncio.wait_for(future, timeout=timeout_s)
