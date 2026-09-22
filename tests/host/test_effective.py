@@ -83,17 +83,27 @@ class TestEffectiveList:
 
     def test_unknown_harness_uses_pi_fallback_for_provider(self, tmp_path) -> None:
         # An unmapped harness consumes both families (same pi fallback the
-        # runtime applies), so the provider resolves but no family default
-        # model exists for it.
+        # runtime applies): the provider resolves, and the model resolves
+        # through the provider's served families with pi preference.
         config = _write_config(tmp_path)
         agents = tmp_path / "agents"
         _write_agent(agents, "weird", {"harness": "not-a-harness"})
         result = provider_ops.effective_list(config_path=config, agents_dir=str(agents))
         (row,) = result["rows"]
-        assert row["model"] is None
-        assert row["model_source"] == "unresolved"
+        assert row["model"] == "gpt-x"
+        assert row["model_source"] == "host-default"
         assert row["provider"] == "gw"
         assert row["provider_source"] == "host-default"
+
+    def test_opencode_harness_resolves_openai_default(self, tmp_path) -> None:
+        config = _write_config(tmp_path)
+        agents = tmp_path / "agents"
+        _write_agent(agents, "coder", {"harness": "opencode"})
+        result = provider_ops.effective_list(config_path=config, agents_dir=str(agents))
+        (row,) = result["rows"]
+        assert row["model"] == "gpt-x"
+        assert row["model_source"] == "host-default"
+        assert row["provider"] == "gw"
 
     def test_broken_spec_becomes_error_row(self, tmp_path) -> None:
         config = _write_config(tmp_path)
