@@ -35,12 +35,18 @@ import {
   useClearHostAgentPin,
   useDeleteHostProvider,
   useHostAgentSpecs,
+  useHostEffective,
   useHostProviders,
   usePinHostAgent,
   useTestHostProvider,
   useUpsertHostProvider,
 } from "@/hooks/useHostProviders";
-import type { HostAgentSpec, HostProvider, ProviderTestResult } from "@/lib/hostProvidersApi";
+import type {
+  HostAgentSpec,
+  HostEffectiveRow,
+  HostProvider,
+  ProviderTestResult,
+} from "@/lib/hostProvidersApi";
 
 const FAMILY_KINDS = new Set(["key", "gateway", "local"]);
 const FAMILIES = ["openai", "anthropic", "gemini"] as const;
@@ -501,9 +507,61 @@ function AgentPinDialog({ open, onOpenChange, hostId, agent, providers }: AgentP
 }
 
 /** Section body shown when the selected host is reachable. */
+function sourceBadge(source: HostEffectiveRow["model_source"]) {
+  if (source === "spec") return <Badge variant="default">pin</Badge>;
+  if (source === "host-default") return <Badge variant="secondary">host default</Badge>;
+  return <Badge variant="outline">unresolved</Badge>;
+}
+
+/** Host × agent × effective model/provider overview (issue #7134). */
+function EffectiveTable({ rows }: { rows: HostEffectiveRow[] }) {
+  return (
+    <div>
+      <h2 className="mb-3 text-lg font-medium">Effective resolution</h2>
+      {rows.length === 0 && (
+        <p className="text-muted-foreground text-sm">No agent specs to resolve on this host.</p>
+      )}
+      <div className="grid gap-2">
+        {rows.map((row) => (
+          <div
+            key={row.agent}
+            className="flex items-center justify-between gap-4 rounded-md border px-4 py-3"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{row.agent}</span>
+                {row.harness && <Badge variant="secondary">{row.harness}</Badge>}
+              </div>
+              {row.error ? (
+                <p className="text-destructive text-sm">{row.error}</p>
+              ) : (
+                <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+                  <span>{row.model ?? "no model"}</span>
+                  {sourceBadge(row.model_source)}
+                  <span>·</span>
+                  <span>{row.provider ?? "no provider"}</span>
+                  {sourceBadge(row.provider_source)}
+                  {row.reasoning_effort && (
+                    <>
+                      <span>·</span>
+                      <span>effort: {row.reasoning_effort}</span>
+                      {sourceBadge(row.effort_source)}
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HostConfigPanels({ hostId }: { hostId: string }) {
   const providersQuery = useHostProviders(hostId);
   const agentsQuery = useHostAgentSpecs(hostId);
+  const effectiveQuery = useHostEffective(hostId);
   const deleteProvider = useDeleteHostProvider(hostId);
   const testProvider = useTestHostProvider(hostId);
   const clearPin = useClearHostAgentPin(hostId);
@@ -516,6 +574,7 @@ function HostConfigPanels({ hostId }: { hostId: string }) {
 
   const providers = providersQuery.data ?? [];
   const agents = agentsQuery.data ?? [];
+  const effective = effectiveQuery.data ?? [];
 
   const runTest = (name: string) => {
     setTestResults((prev) => ({ ...prev, [name]: "pending" }));
@@ -670,6 +729,11 @@ function HostConfigPanels({ hostId }: { hostId: string }) {
         hostId={hostId}
         editing={editing}
       />
+      {effectiveQuery.isError ? (
+        <p className="text-destructive text-sm">{(effectiveQuery.error as Error).message}</p>
+      ) : (
+        <EffectiveTable rows={effective} />
+      )}
       <AgentPinDialog
         open={pinAgent !== null}
         onOpenChange={(open) => {

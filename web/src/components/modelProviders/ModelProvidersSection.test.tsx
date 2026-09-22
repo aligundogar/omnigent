@@ -14,6 +14,7 @@ vi.mock("@/hooks/useHosts", () => ({ useHosts: vi.fn() }));
 vi.mock("@/hooks/useHostProviders", () => ({
   useHostProviders: vi.fn(),
   useHostAgentSpecs: vi.fn(),
+  useHostEffective: vi.fn(),
   useUpsertHostProvider: vi.fn(),
   useDeleteHostProvider: vi.fn(),
   useTestHostProvider: vi.fn(),
@@ -63,6 +64,11 @@ function mockQueries() {
     isError: false,
     error: null,
   } as unknown as ReturnType<typeof hooks.useHostAgentSpecs>);
+  vi.mocked(hooks.useHostEffective).mockReturnValue({
+    data: [],
+    isError: false,
+    error: null,
+  } as unknown as ReturnType<typeof hooks.useHostEffective>);
 }
 
 beforeEach(() => {
