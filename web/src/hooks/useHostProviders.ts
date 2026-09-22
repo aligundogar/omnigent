@@ -7,12 +7,12 @@ import {
   clearHostAgentPin,
   deleteHostProvider,
   fetchHostAgentSpecs,
+  fetchHostEffective,
   fetchHostProviders,
   pinHostAgent,
   testHostProvider,
   upsertHostProvider,
   type AgentPinInput,
-  type HostProvider,
   type ProviderTestResult,
 } from "@/lib/hostProvidersApi";
 
@@ -32,11 +32,20 @@ export function useHostAgentSpecs(hostId: string | null) {
   });
 }
 
+export function useHostEffective(hostId: string | null) {
+  return useQuery({
+    queryKey: ["host-effective", hostId],
+    queryFn: () => fetchHostEffective(hostId as string),
+    enabled: hostId !== null,
+  });
+}
+
 function useInvalidateHostConfig(hostId: string | null) {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: ["host-providers", hostId] });
     void queryClient.invalidateQueries({ queryKey: ["host-agent-specs", hostId] });
+    void queryClient.invalidateQueries({ queryKey: ["host-effective", hostId] });
   };
 }
 
@@ -81,4 +90,4 @@ export function useClearHostAgentPin(hostId: string | null) {
   });
 }
 
-export type { HostProvider };
+export type { HostEffectiveRow, HostProvider } from "@/lib/hostProvidersApi";

@@ -9480,6 +9480,51 @@
         ]
       }
     },
+    "/v1/hosts/{host_id}/agent-specs/effective": {
+      "get": {
+        "description": "Resolve every host-local agent spec's effective model/provider.\n\nResolution order: agent spec pin > host default > unresolved\n(issue omnigent-ai/omnigent#7134) \u2014 the overview table behind the\nModels & providers settings section. Computed on the host from\nits own `config.yaml` + specs, so the panel shows what a launch\nthere will actually use.",
+        "operationId": "effective_host_agent_specs_v1_hosts__host_id__agent_specs_effective_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "host_id",
+            "required": true,
+            "schema": {
+              "title": "Host Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Effective Host Agent Specs V1 Hosts  Host Id  Agent Specs Effective Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Effective Host Agent Specs",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
     "/v1/hosts/{host_id}/agent-specs/{agent_name}/pin": {
       "delete": {
         "description": "Remove an agent spec's provider and model pins.",

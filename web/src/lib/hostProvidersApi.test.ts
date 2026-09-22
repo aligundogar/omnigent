@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearHostAgentPin,
   fetchHostAgentSpecs,
+  fetchHostEffective,
   fetchHostProviders,
   type HostProvidersApiError,
   pinHostAgent,
@@ -64,6 +65,30 @@ describe("hostProvidersApi", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/v1/hosts/host_1/agent-specs/my-agent/pin");
     expect(init?.method).toBe("DELETE");
+  });
+
+  it("fetchHostEffective GETs the effective route and unwraps rows", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        rows: [
+          {
+            agent: "a",
+            harness: "codex",
+            model: "gpt-x",
+            model_source: "host-default",
+            provider: "gw",
+            provider_source: "host-default",
+            reasoning_effort: null,
+            effort_source: "unresolved",
+          },
+        ],
+      }),
+    );
+    const rows = await fetchHostEffective("host_1");
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe("/v1/hosts/host_1/agent-specs/effective");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].model_source).toBe("host-default");
   });
 
   it("testHostProvider POSTs and returns the probe result", async () => {

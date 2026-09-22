@@ -1823,4 +1823,16 @@ def create_hosts_router(
         """Remove an agent spec's provider and model pins."""
         return await _run_provider_op(request, host_id, "agent_pin_clear", {"agent": agent_name})
 
+    @router.get("/hosts/{host_id}/agent-specs/effective")
+    async def effective_host_agent_specs(request: Request, host_id: str) -> dict[str, Any]:
+        """Resolve every host-local agent spec's effective model/provider.
+
+        Resolution order: agent spec pin > host default > unresolved
+        (issue omnigent-ai/omnigent#7134) — the overview table behind the
+        Models & providers settings section. Computed on the host from
+        its own ``config.yaml`` + specs, so the panel shows what a launch
+        there will actually use.
+        """
+        return await _run_provider_op(request, host_id, "effective_list", {})
+
     return router
