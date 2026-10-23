@@ -1941,7 +1941,7 @@ def create_hosts_router(
                 status_code=502,
                 detail=f"host '{host_id}' connection lost",
             ) from exc
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise HTTPException(
                 status_code=504,
                 detail=(
